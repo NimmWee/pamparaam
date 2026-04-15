@@ -1,10 +1,10 @@
 # MTC Wiki Editor Backend
 
-Backend monorepo for the wiki editor platform described in `specs/001-wiki-editor-backend`.
+Backend monorepo для wiki editor platform из `specs/001-wiki-editor-backend`.
 
-Russian version: [README.ru.md](/C:/MTC/README.ru.md)
+English version: `README.en.md` пока не ведётся отдельно. Основной README в репозитории теперь русский.
 
-The repository contains a working demo stack with:
+Репозиторий содержит рабочий demo stack:
 
 - API Gateway
 - Auth Service
@@ -13,26 +13,26 @@ The repository contains a working demo stack with:
 - Knowledge Graph / Search Service
 - MWS Integration Service
 - File Service
-- PostgreSQL databases per bounded context
+- PostgreSQL базы по bounded context
 - Redis
 - NATS JetStream
 - MinIO
 - MWS mock
 
-The default demo runtime is Docker Compose based and is the recommended way to start the system.
+Основной и рекомендуемый способ запуска: Docker Compose.
 
-## What You Get
+## Что уже реализовано
 
-- page create, draft save, publish, restore, archive
-- live MWS table embeds with degraded fallback behavior
-- realtime collaboration over WebSocket with server-authoritative patch flow
-- backlinks and PostgreSQL-backed search
-- file upload, finalize, lookup, and soft delete
-- RBAC through the Auth Service runtime path
-- editor metadata, slash-menu catalog, hotkeys, and sync resume
+- создание страницы, draft save, publish, restore, archive
+- live MWS table embeds с degraded fallback
+- realtime collaboration по WebSocket с server-authoritative patch flow
+- backlinks и PostgreSQL-backed search
+- file upload, finalize, lookup и soft delete
+- RBAC через Auth Service runtime path
+- editor metadata, slash-menu catalog, hotkeys и sync resume
 - end-to-end Compose smoke validation
 
-## Architecture Overview
+## Архитектура
 
 ```mermaid
 flowchart LR
@@ -71,19 +71,19 @@ flowchart LR
     MWSI --> MWS[(MWS Tables / Mock)]
 ```
 
-### Service Responsibilities
+### Ответственность сервисов
 
-- `API Gateway`: public entrypoint, JWT/auth middleware, OpenAPI, WebSocket upgrade proxy.
+- `API Gateway`: единая публичная точка входа, JWT/auth middleware, OpenAPI, WebSocket upgrade proxy.
 - `Auth Service`: login, refresh, JWKS, workspace/page grants, runtime authorization authority.
 - `Page Service`: canonical document snapshot, draft/published heads, autosave, restore, archive, attachments, links, embed refs, outbox events.
 - `Collaboration Service`: presence, live sessions, patch validation, session replay/reconnect, WebSocket protocol.
 - `Knowledge Graph / Search Service`: backlink/read models, PostgreSQL full-text search, related pages, auth-aware filtering.
-- `MWS Integration Service`: table access validation, schema/preview fetch, degraded embed descriptors.
+- `MWS Integration Service`: проверка доступа к таблице, schema/preview fetch, degraded embed descriptors.
 - `File Service`: upload session, finalize, metadata persistence, MinIO object storage, soft delete.
 
-## Editor Components And Integrations
+## Компоненты редактора и интеграции
 
-This repository is backend-only, but it already defines the contracts expected by a block editor client.
+Этот репозиторий backend-only, но он уже задаёт контракты, которые ожидает block editor client.
 
 ```mermaid
 flowchart TB
@@ -118,85 +118,85 @@ flowchart TB
     GW1 --> SEARCH2[Search Service]
 ```
 
-### Editor-facing Backend Contracts
+### Какие backend-контракты есть для редактора
 
-- `GET /api/v1/editor/metadata`: block catalog, slash-menu items, hotkeys, capability flags, embed catalog.
-- `PATCH /api/v1/pages/{pageId}/draft`: revision-gated autosave of the full JSON snapshot.
-- `GET /api/v1/pages/{pageId}`: draft/published page load with embed-aware hydration.
-- `POST /api/v1/editor/sync`: sync resume and replay-window based reconciliation.
-- `GET /ws/collab?page_id=...&workspace_id=...`: authenticated realtime collaboration session.
-- `GET /api/v1/search?q=...&workspace_id=...`: search for references, links, and context recovery flows.
-- `POST /api/v1/files/uploads` plus `POST /api/v1/files/uploads/{uploadId}/complete`: attachment upload flow.
+- `GET /api/v1/editor/metadata`: block catalog, slash-menu items, hotkeys, capability flags, embed catalog
+- `PATCH /api/v1/pages/{pageId}/draft`: revision-gated autosave полного JSON snapshot
+- `GET /api/v1/pages/{pageId}`: загрузка draft/published page с embed-aware hydration
+- `POST /api/v1/editor/sync`: sync resume и replay-window reconciliation
+- `GET /ws/collab?page_id=...&workspace_id=...`: authenticated realtime collaboration session
+- `GET /api/v1/search?q=...&workspace_id=...`: поиск страниц, ссылок и контекстных совпадений
+- `POST /api/v1/files/uploads` плюс `POST /api/v1/files/uploads/{uploadId}/complete`: flow загрузки вложений
 
-### Current Editor Metadata Exposed By Backend
+### Что backend уже отдаёт для editor metadata
 
 - supported block types:
   `paragraph`, `heading`, `checklist`, `quote`, `code`, `page_link`, `table_embed`, `image`, `file`
 - slash-menu actions:
   paragraph, heading, checklist, quote, code, page link, MWS table, image, file
 - hotkeys:
-  `mod+/`, `mod+alt+1`, `mod+shift+7`, and `mod+shift+p` when publish is allowed
+  `mod+/`, `mod+alt+1`, `mod+shift+7`, и `mod+shift+p`, если publish разрешён
 - capability flags:
   slash-menu, hotkeys, sync resume, replay window, realtime collaboration, files, embeds, MWS tables, publish, restore
 
-## Feature Matrix From WikiLive Template
+## Матрица фич из WikiLive template
 
-Source template: [WikiLive feature template](</C:/MTC/WikiLive шаблон фич (2).xlsx>)
+Источник: [WikiLive шаблон фич (2).xlsx](<./WikiLive шаблон фич (2).xlsx>)
 
-| # | Feature | Type | Status in this repo | How it is implemented |
+| # | Фича | Тип | Статус в репозитории | Как реализовано |
 |---|---|---|---|---|
-| 1.0 | Integration with MWS Tables via API | required | Implemented | `MWS Integration Service` validates access, fetches schema and preview, and returns degraded descriptors when MWS is unavailable. |
-| 2.0 | Create and edit wiki page in MWS Tables scenario | required | Implemented | `Page Service` stores canonical JSON document snapshots and serves create/get/draft flows through Gateway. |
-| 3.0 | Insert existing MWS table into page body | required | Implemented | Block type `table_embed` stores only embed metadata; live table data stays in MWS. |
-| 4.0 | Autosave and restore after reload or return | required | Backend implemented | Revision-gated autosave, recovery, and sync resume are implemented; browser local cache itself belongs to frontend and is not part of this repo. |
-| 5.0 | Slash-menu for fast block insertion | required | Implemented | Backend exposes slash-menu catalog via `/editor/metadata`; frontend can render from API instead of hardcoding. |
-| 6.0 | Hotkeys for slash-menu and key editor commands | required | Implemented | Hotkey definitions are exposed via `/editor/metadata`; publish hotkey is capability-driven. |
-| 7.0 | Links to other pages and backlinks | required | Implemented | Page links are extracted from canonical snapshots; Search Service builds backlink and related-page read models. |
-| 8.0 | Collaborative document editing | required | Implemented | `Collaboration Service` provides authenticated WebSocket rooms, presence, patch validation, stale patch rejection, and reconnect handling. |
-| 9.0 | Open-source editor with permissive license | required | Not implemented in this repo | This repository is backend-only. It exposes backend contracts for an editor but does not ship the frontend editor implementation itself. |
-| 10.0 | Table on page as a live object | optional | Implemented | Embedded tables remain linked to MWS as source of truth, with schema/preview cache and degraded fallback. |
-| 11.0 | Commenting | optional | Not implemented | Out of current MVP scope. |
-| 12.0 | Versioning, edit history, separate drafts | optional | Implemented | Append-only revisions, version history, publish, restore, draft recovery, archived state. |
-| 13.0 | AI suggestions or block generation | optional | Not implemented | Out of current MVP scope. |
-| 14.0 | Graph of links between pages | optional | Partially implemented | The backend stores backlinks and related pages, but there is no dedicated graph visualization or graph traversal API. |
-| 15.0 | Editor plugins or extensibility | optional | Partially implemented | Block model and metadata catalog are extensible, but a full plugin runtime or SDK is not implemented. |
-| 16.0 | External embeds and widgets | optional | Partially implemented | MWS table embeds are implemented; generic widgets and arbitrary external embeds are not. |
-| 17.0 | Design Kit compliance | optional | Not implemented in this repo | Backend repository; design system and frontend visual compliance are outside backend scope. |
-| 18.0 | Other functionality | optional | Implemented as repo extras | Search, file uploads, RBAC, archive, Compose smoke validation, OpenAPI contract, and demo runtime automation. |
+| 1.0 | Integration with MWS Tables via API | обязательная | Реализовано | `MWS Integration Service` валидирует доступ, получает schema/preview и возвращает degraded descriptor при недоступности MWS. |
+| 2.0 | Create and edit wiki page in MWS Tables scenario | обязательная | Реализовано | `Page Service` хранит canonical JSON document snapshot и обслуживает create/get/draft flow через Gateway. |
+| 3.0 | Insert existing MWS table into page body | обязательная | Реализовано | Block type `table_embed` хранит только embed metadata; live table data остаётся в MWS. |
+| 4.0 | Autosave and restore after reload or return | обязательная | Backend реализован | Revision-gated autosave, recovery и sync resume реализованы; browser local cache относится к frontend и в этот repo не входит. |
+| 5.0 | Slash-menu for fast block insertion | обязательная | Реализовано | Backend отдаёт slash-menu catalog через `/editor/metadata`; frontend может строить меню по API. |
+| 6.0 | Hotkeys for slash-menu and key editor commands | обязательная | Реализовано | Hotkey definitions отдаются через `/editor/metadata`; hotkey publish зависит от capability. |
+| 7.0 | Links to other pages and backlinks | обязательная | Реализовано | Page links извлекаются из canonical snapshot; Search Service строит backlink и related-page read models. |
+| 8.0 | Collaborative document editing | обязательная | Реализовано | `Collaboration Service` даёт authenticated WebSocket rooms, presence, patch validation, stale patch rejection и reconnect handling. |
+| 9.0 | Open-source editor with permissive license | обязательная | Не реализовано в этом repo | Репозиторий backend-only. Он задаёт backend contracts для editor, но не содержит frontend editor implementation. |
+| 10.0 | Table on page as a live object | дополнительная | Реализовано | Embedded tables остаются связанными с MWS как source of truth, со schema/preview cache и degraded fallback. |
+| 11.0 | Commenting | дополнительная | Не реализовано | Вне текущего MVP scope. |
+| 12.0 | Versioning, edit history, separate drafts | дополнительная | Реализовано | Append-only revisions, version history, publish, restore, draft recovery, archived state. |
+| 13.0 | AI suggestions or block generation | дополнительная | Не реализовано | Вне текущего MVP scope. |
+| 14.0 | Graph of links between pages | дополнительная | Частично | Backend хранит backlinks и related pages, но нет отдельной graph visualization или graph traversal API. |
+| 15.0 | Editor plugins or extensibility | дополнительная | Частично | Block model и metadata catalog расширяемы, но полноценного plugin runtime или SDK нет. |
+| 16.0 | External embeds and widgets | дополнительная | Частично | Реализованы MWS table embeds; generic widgets и arbitrary external embeds не реализованы. |
+| 17.0 | Design Kit compliance | дополнительная | Не реализовано в этом repo | Это backend repository; design system и frontend visual compliance вне его scope. |
+| 18.0 | Other functionality | дополнительная | Реализовано как extras | Search, file uploads, RBAC, archive, Compose smoke validation, OpenAPI contract и demo runtime automation. |
 
-## Mandatory And Additional Features
+## Обязательные и дополнительные фичи
 
-### Mandatory Features In Current MVP
+### Обязательные фичи текущего MVP
 
 - Live MWS table embeds:
-  `Page Service` stores only embed reference metadata, while `MWS Integration Service` fetches schema/preview and validates table access.
+  `Page Service` хранит только embed reference metadata, а `MWS Integration Service` получает schema/preview и валидирует доступ к таблице.
 - Create, edit, publish, restore, archive:
-  `Page Service` owns canonical draft and published heads, append-only revisions, and lifecycle transitions.
-- Autosave and draft recovery:
-  every autosave includes `base_revision_no`; stale writes are rejected explicitly; recovery returns the latest accepted draft state.
+  `Page Service` владеет canonical draft и published heads, append-only revisions и lifecycle transitions.
+- Autosave и draft recovery:
+  каждый autosave содержит `base_revision_no`; stale writes отклоняются явно; recovery возвращает latest accepted draft state.
 - Slash-menu, hotkeys, editor metadata:
-  `Page Service` exposes editor catalog and capabilities through `/editor/metadata`.
+  `Page Service` отдаёт editor catalog и capability flags через `/editor/metadata`.
 - Realtime collaboration:
-  `Collaboration Service` accepts validated patches against a base revision and broadcasts only server-accepted updates.
+  `Collaboration Service` принимает только валидированные patches against base revision и рассылает только server-accepted updates.
 - Links, backlinks, search:
-  `Page Service` extracts links; `Knowledge Graph / Search Service` projects them into backlink and search read models and PostgreSQL FTS indexes.
+  `Page Service` извлекает links; `Knowledge Graph / Search Service` строит backlink/search read models и PostgreSQL FTS indexes.
 - File uploads:
-  `File Service` manages upload sessions, metadata persistence, MinIO object storage, download URLs, and soft delete.
+  `File Service` управляет upload sessions, metadata persistence, MinIO object storage, download URLs и soft delete.
 - RBAC:
-  `Auth Service` is the runtime authority for workspace and page grants; other services call it via gRPC for authorization decisions.
+  `Auth Service` это runtime authority для workspace/page grants; остальные сервисы спрашивают его по gRPC.
 
-### Additional Or Optional Features Already Available
+### Дополнительные возможности, которые уже есть
 
 - Version history and restore:
-  publish does not destroy draft history; restore creates a new draft head from a previous revision.
+  publish не уничтожает историю draft; restore создаёт новый draft head из предыдущей revision.
 - Sync resume and replay window:
-  `/editor/sync` can resume from meaningful server-side resumable state instead of forcing a full reload every time.
+  `/editor/sync` может продолжить работу из meaningful server-side resumable state, а не всегда делать полный reload.
 - Related pages:
-  `Knowledge Graph / Search Service` returns not only backlinks but also meaningful related pages.
+  `Knowledge Graph / Search Service` отдаёт не только backlinks, но и meaningful related pages.
 - Attachment-aware pages:
-  `Page Service` can link file references into canonical document blocks without owning binary storage.
+  `Page Service` умеет связывать file references с canonical document blocks, не владея бинарным storage.
 
-### Additional Features Not Implemented Yet
+### Дополнительные возможности, которых пока нет
 
 - commenting
 - AI assistance or generation
@@ -204,7 +204,7 @@ Source template: [WikiLive feature template](</C:/MTC/WikiLive шаблон фи
 - standalone graph view of page relationships
 - frontend editor package inside this repository
 
-## Repository Layout
+## Структура репозитория
 
 ```text
 deploy/      Docker Compose and infra config
@@ -215,81 +215,81 @@ specs/       Feature specs and OpenAPI contract
 tests/       Contract, integration, realtime, and compose smoke tests
 ```
 
-## Prerequisites
+## Требования
 
-- Docker Desktop with Compose support
-- Go 1.23+ if you want to run services or tools outside Docker
-- PowerShell or a POSIX shell for helper scripts
+- Docker Desktop с Compose support
+- Go 1.23+, если хочется запускать сервисы и утилиты вне Docker
+- PowerShell или POSIX shell для helper scripts
 
-## Quick Start
+## Быстрый запуск
 
-### 1. Prepare environment
+### 1. Подготовить environment
 
 ```bash
 cp .env.example .env
 ```
 
-On Windows PowerShell:
+В Windows PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-### 2. Start the full demo stack
+### 2. Поднять demo stack
 
 ```bash
 docker compose --env-file .env -f deploy/docker-compose.yml up -d --build
 ```
 
-### 3. Run migrations
+### 3. Прогнать миграции
 
 ```bash
 bash scripts/migrate.sh up
 ```
 
-On Windows PowerShell:
+В Windows PowerShell:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\migrate.ps1 up
 ```
 
-### 4. Seed demo auth data
+### 4. Засидить demo auth data
 
 ```bash
 docker compose --env-file .env -f deploy/docker-compose.yml exec -T auth-service /app/seed-demo
 ```
 
-### 5. Verify the demo runtime
+### 5. Проверить demo runtime
 
 ```bash
 bash tests/compose/demo_smoke_test.sh
 ```
 
-On Windows PowerShell:
+В Windows PowerShell:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tests\compose\demo_smoke_test.ps1
 ```
 
-If the smoke test passes, the stack is in the expected demo-ready state.
+Если smoke test проходит, стек находится в ожидаемом demo-ready состоянии.
 
-## One-Command Bootstrap
+## One-command bootstrap
 
-If you want the repo to do the common setup for you:
+Если хочется стандартную инициализацию одним шагом:
 
 ```bash
 bash scripts/bootstrap-demo.sh
 ```
 
-This script will:
+Скрипт делает:
 
-1. create `.env` from `.env.example` if needed
-2. run `go work sync`
-3. build and start Compose
-4. apply migrations
-5. seed demo auth data
+1. создаёт `.env` из `.env.example`, если его ещё нет
+2. запускает `go work sync`
+3. собирает и поднимает Compose stack
+4. применяет миграции
+5. сидит demo auth data
 
-## Useful Make Targets
+## Полезные Make targets
 
 ```bash
 make help
@@ -307,9 +307,9 @@ make test
 
 ## Demo Walkthrough
 
-This is a practical sequence for a live backend demo using the default Docker Compose runtime.
+Ниже практическая последовательность для живого backend demo на default Docker Compose runtime.
 
-### 1. Start the stack
+### 1. Поднять стек
 
 ```bash
 docker compose --env-file .env -f deploy/docker-compose.yml up -d --build
@@ -317,9 +317,9 @@ bash scripts/migrate.sh up
 docker compose --env-file .env -f deploy/docker-compose.yml exec -T auth-service /app/seed-demo
 ```
 
-### 2. Authenticate and get a token
+### 2. Получить токен
 
-Example request:
+Пример запроса:
 
 ```bash
 curl -s http://localhost:8080/api/v1/auth/login \
@@ -327,13 +327,13 @@ curl -s http://localhost:8080/api/v1/auth/login \
   -d '{"email":"editor@example.com","password":"password123"}'
 ```
 
-Use the returned `access_token` as:
+Используй возвращённый `access_token` как:
 
 ```text
 Authorization: Bearer <access_token>
 ```
 
-### 3. Create a page
+### 3. Создать страницу
 
 ```bash
 curl -s http://localhost:8080/api/v1/pages \
@@ -351,7 +351,7 @@ curl -s http://localhost:8080/api/v1/pages \
   }'
 ```
 
-### 4. Autosave a new draft revision
+### 4. Сохранить новую draft revision
 
 ```bash
 curl -s -X PATCH http://localhost:8080/api/v1/pages/<page_id>/draft \
@@ -370,22 +370,22 @@ curl -s -X PATCH http://localhost:8080/api/v1/pages/<page_id>/draft \
   }'
 ```
 
-### 5. Show editor metadata
+### 5. Показать editor metadata
 
 ```bash
 curl -s "http://localhost:8080/api/v1/editor/metadata?workspace_id=11111111-1111-1111-1111-111111111111&page_id=<page_id>" \
   -H "Authorization: Bearer <access_token>"
 ```
 
-Use this step to show:
+На этом шаге удобно показать:
 
 - block catalog
 - slash-menu commands
 - hotkeys
 - capability flags
-- MWS embed availability
+- доступность MWS embeds
 
-### 6. Publish and inspect history
+### 6. Publish и история версий
 
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/pages/<page_id>/publish \
@@ -394,14 +394,14 @@ curl -s -X POST http://localhost:8080/api/v1/pages/<page_id>/publish \
   -d '{"base_revision_no":2}'
 ```
 
-Then:
+Потом:
 
 ```bash
 curl -s http://localhost:8080/api/v1/pages/<page_id>/versions \
   -H "Authorization: Bearer <access_token>"
 ```
 
-### 7. Search and backlinks
+### 7. Search и backlinks
 
 ```bash
 curl -s "http://localhost:8080/api/v1/search?workspace_id=11111111-1111-1111-1111-111111111111&q=Demo" \
@@ -415,7 +415,7 @@ curl -s http://localhost:8080/api/v1/pages/<page_id>/backlinks \
 
 ### 8. File upload flow
 
-Start upload:
+Старт загрузки:
 
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/files/uploads \
@@ -431,7 +431,7 @@ curl -s -X POST http://localhost:8080/api/v1/files/uploads \
   }'
 ```
 
-Complete upload after object PUT:
+Завершение после object PUT:
 
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/files/uploads/<upload_id>/complete \
@@ -442,32 +442,30 @@ curl -s -X POST http://localhost:8080/api/v1/files/uploads/<upload_id>/complete 
 
 ### 9. Realtime collaboration
 
-Open a WebSocket to:
+Открыть WebSocket на:
 
 ```text
 ws://localhost:8080/ws/collab?page_id=<page_id>&workspace_id=11111111-1111-1111-1111-111111111111
 ```
 
-Headers:
+С заголовками:
 
 ```text
 Authorization: Bearer <access_token>
 X-Request-Id: demo-ws-1
 ```
 
-Then send `join_session`, presence updates, and `submit_patch` messages according to:
+Дальше отправлять `join_session`, presence updates и `submit_patch` по протоколу:
 
-- [websocket-protocol.md](/C:/MTC/specs/001-wiki-editor-backend/contracts/websocket-protocol.md)
+- [websocket-protocol.md](./specs/001-wiki-editor-backend/contracts/websocket-protocol.md)
 
-### 10. Prove the whole stack is healthy
+### 10. Доказать, что весь стек здоров
 
 ```bash
 bash tests/compose/demo_smoke_test.sh
 ```
 
-## Default Runtime Endpoints
-
-Host-exposed endpoints for the demo:
+## Host endpoints по умолчанию
 
 - Gateway: `http://localhost:8080`
 - Auth Service: `http://localhost:8081`
@@ -488,67 +486,67 @@ Health endpoints:
 - `http://localhost:8085/health/ready`
 - `http://localhost:8086/health/ready`
 
-Notes:
+Примечания:
 
-- MinIO is intentionally internal to the Compose network in the default demo path.
-- Prometheus is also not exposed on the host by default.
-- Internal service-to-service gRPC, Redis, NATS, and MinIO wiring is configured through `.env`.
+- MinIO намеренно оставлен internal-only в default Compose demo path.
+- Prometheus по умолчанию не открыт наружу.
+- Внутренние service-to-service gRPC, Redis, NATS и MinIO wiring задаются через `.env`.
 
-## Local Development Notes
+## Локальная разработка
 
-### Run Go tests
+### Запуск Go тестов
 
-From the repository root:
+Из корня репозитория:
 
 ```bash
 go test ./...
 ```
 
-Or use:
+Или:
 
 ```bash
 make test
 ```
 
-### Tail logs
+### Логи
 
 ```bash
 docker compose --env-file .env -f deploy/docker-compose.yml logs -f
 ```
 
-### Stop and remove the stack
+### Остановить и удалить стек
 
 ```bash
 docker compose --env-file .env -f deploy/docker-compose.yml down --remove-orphans
 ```
 
-To remove named volumes too:
+Чтобы удалить и named volumes тоже:
 
 ```bash
 docker compose --env-file .env -f deploy/docker-compose.yml down -v --remove-orphans
 ```
 
-## API Contract
+## Public API Contract
 
-The public API contract used by the gateway lives here:
+Публичный API contract, который использует gateway:
 
 ```text
 specs/001-wiki-editor-backend/contracts/public-api.openapi.yaml
 ```
 
-This file is also copied into the gateway image during Docker build.
+Этот файл также копируется внутрь gateway image во время Docker build.
 
 ## Troubleshooting
 
-### Compose starts but a service is unhealthy
+### Compose поднялся, но сервис unhealthy
 
-Check service logs:
+Смотреть логи сервиса:
 
 ```bash
 docker compose --env-file .env -f deploy/docker-compose.yml logs <service-name>
 ```
 
-Typical service names:
+Типичные service names:
 
 - `gateway`
 - `auth-service`
@@ -558,20 +556,20 @@ Typical service names:
 - `mws-integration-service`
 - `file-service`
 
-### Migrations fail
+### Миграции упали
 
-Re-run migrations after the databases are healthy:
+Повторно прогнать миграции после того, как базы стали healthy:
 
 ```bash
 bash scripts/migrate.sh up
 ```
 
-### You want a high-confidence end-to-end check
+### Нужна уверенная end-to-end проверка
 
-Run the Compose smoke test:
+Запусти Compose smoke test:
 
 ```bash
 bash tests/compose/demo_smoke_test.sh
 ```
 
-It validates the real `cmd/server` boot path, env wiring, health endpoints, auth seeding, and an end-to-end workflow through the gateway.
+Он проверяет реальный `cmd/server` boot path, env wiring, health endpoints, auth seeding и end-to-end workflow через gateway.
