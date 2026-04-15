@@ -1,0 +1,28 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+
+# Workspace
+.env
+.env.local
+.env.override
+vendor/
+
+# Tooling
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
+*.tmp
+*.swp
+
+# Local runtime
+logs/
+tmp/
+data/

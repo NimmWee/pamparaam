@@ -8,25 +8,19 @@
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
-  IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
-  Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
-  you should still have a viable MVP (Minimum Viable Product) that delivers value.
-  
-  Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
-  Think of each story as a standalone slice of functionality that can be:
-  - Developed independently
-  - Tested independently
-  - Deployed independently
-  - Demonstrated to users independently
+  IMPORTANT: User stories should be prioritized as user journeys ordered by
+  importance. Each story must be independently testable and demonstrable.
+  For this repository, stories MUST call out the owning backend service and any
+  realtime/collaboration behavior they depend on.
 -->
 
 ### User Story 1 - [Brief Title] (Priority: P1)
 
 [Describe this user journey in plain language]
 
-**Why this priority**: [Explain the value and why it has this priority level]
-
-**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
+**Owning Service**: [service name]  
+**Why this priority**: [Explain the value and why it has this priority level]  
+**Independent Test**: [Describe how this can be tested independently and demoed via Docker Compose]
 
 **Acceptance Scenarios**:
 
@@ -39,8 +33,8 @@
 
 [Describe this user journey in plain language]
 
-**Why this priority**: [Explain the value and why it has this priority level]
-
+**Owning Service**: [service name]  
+**Why this priority**: [Explain the value and why it has this priority level]  
 **Independent Test**: [Describe how this can be tested independently]
 
 **Acceptance Scenarios**:
@@ -53,8 +47,8 @@
 
 [Describe this user journey in plain language]
 
-**Why this priority**: [Explain the value and why it has this priority level]
-
+**Owning Service**: [service name]  
+**Why this priority**: [Explain the value and why it has this priority level]  
 **Independent Test**: [Describe how this can be tested independently]
 
 **Acceptance Scenarios**:
@@ -67,62 +61,66 @@
 
 ### Edge Cases
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right edge cases.
--->
-
-- What happens when [boundary condition]?
-- How does system handle [error scenario]?
+- What happens when optimistic concurrency detects a stale document revision?
+- How does the system recover when autosave or patch sync is interrupted and then resumes?
+- How are draft and published states kept consistent during concurrent edits or publish actions?
+- What happens when RBAC denies access at workspace scope or page scope?
+- How are NATS, Redis, or MinIO dependency failures surfaced without leaking sensitive data?
 
 ## Requirements *(mandatory)*
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right functional requirements.
--->
-
 ### Functional Requirements
 
-- **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
-- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]  
-- **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
-- **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
-- **FR-005**: System MUST [behavior, e.g., "log all security events"]
+- **FR-001**: System MUST identify the owning service and bounded context for the feature.
+- **FR-002**: System MUST keep business logic out of HTTP/gRPC handlers and outside transport code.
+- **FR-003**: System MUST define all public REST endpoints and WebSocket interactions required by the feature.
+- **FR-004**: System MUST define internal gRPC and NATS contracts when the feature requires inter-service communication.
+- **FR-005**: System MUST document data ownership and persistence changes for PostgreSQL, Redis, and MinIO where applicable.
+- **FR-006**: System MUST define authentication, authorization, and validation rules for all externally reachable actions.
+- **FR-007**: System MUST define observability requirements including logs, metrics, correlation IDs, and health/readiness impact.
 
-*Example of marking unclear requirements:*
+### Mandatory Platform Capabilities
 
-- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
-- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+<!--
+  Mark each capability as one of:
+  - Required and in scope
+  - Existing dependency
+  - Not impacted by this feature
+  Any feature affecting editor or collaboration flows must explicitly address the
+  relevant items below.
+-->
+
+- **MC-001**: Live embedded MWS Tables
+- **MC-002**: Inline autosave
+- **MC-003**: Local sync with backend
+- **MC-004**: Backlinks
+- **MC-005**: Slash-menu metadata support
+- **MC-006**: Realtime collaboration with presence, patch sync, and conflict handling
+
+### Consistency & Reliability Requirements
+
+- **CR-001**: Features affecting editable content MUST define optimistic concurrency behavior.
+- **CR-002**: Features affecting pages MUST define draft and published state transitions when relevant.
+- **CR-003**: Features affecting autosave MUST define revision-based save semantics.
+- **CR-004**: Features emitting domain events MUST define outbox-backed publication behavior.
 
 ### Key Entities *(include if feature involves data)*
 
-- **[Entity 1]**: [What it represents, key attributes without implementation]
+- **[Entity 1]**: [What it represents, key attributes, owning service]
 - **[Entity 2]**: [What it represents, relationships to other entities]
 
 ## Success Criteria *(mandatory)*
 
-<!--
-  ACTION REQUIRED: Define measurable success criteria.
-  These must be technology-agnostic and measurable.
--->
-
 ### Measurable Outcomes
 
-- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
-- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
-- **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
-- **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-001**: [Primary user outcome completed successfully in demo-ready Docker Compose environment]
+- **SC-002**: [Feature-specific latency, sync freshness, or throughput target]
+- **SC-003**: [Conflict handling, autosave reliability, or recovery behavior validated]
+- **SC-004**: [Security/authorization and observability signals verified for the primary flow]
 
 ## Assumptions
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right assumptions based on reasonable defaults
-  chosen when the feature description did not specify certain details.
--->
-
-- [Assumption about target users, e.g., "Users have stable internet connectivity"]
-- [Assumption about scope boundaries, e.g., "Mobile support is out of scope for v1"]
-- [Assumption about data/environment, e.g., "Existing authentication system will be reused"]
-- [Dependency on existing system/service, e.g., "Requires access to the existing user profile API"]
+- [Assumption about service ownership or existing bounded context]
+- [Assumption about whether this feature impacts editor/collaboration paths]
+- [Assumption about existing infrastructure for JWT, RBAC, PostgreSQL, Redis, NATS, or MinIO]
+- [Assumption about demo environment behavior under Docker Compose]

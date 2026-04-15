@@ -1,0 +1,32 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: gateway
+    static_configs:
+      - targets: ["gateway:8080"]
+
+  - job_name: auth-service
+    static_configs:
+      - targets: ["auth-service:8081"]
+
+  - job_name: page-service
+    static_configs:
+      - targets: ["page-service:8082"]
+
+  - job_name: collaboration-service
+    static_configs:
+      - targets: ["collaboration-service:8083"]
+
+  - job_name: search-service
+    static_configs:
+      - targets: ["knowledge-graph-search-service:8084"]
+
+  - job_name: mws-integration-service
+    static_configs:
+      - targets: ["mws-integration-service:8085"]
+
+  - job_name: file-service
+    static_configs:
+      - targets: ["file-service:8086"]

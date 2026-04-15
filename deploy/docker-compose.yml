@@ -1,0 +1,360 @@
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: wiki-gateway
+    environment:
+      GATEWAY_PORT: 8080
+      LOG_LEVEL: ${LOG_LEVEL}
+      AUTH_SERVICE_GRPC_ADDR: ${AUTH_SERVICE_GRPC_ADDR}
+      AUTH_SERVICE_BASE_URL: ${AUTH_SERVICE_BASE_URL}
+      AUTH_SERVICE_READY_URL: ${AUTH_SERVICE_READY_URL}
+      AUTH_SERVICE_JWKS_URL: ${AUTH_SERVICE_JWKS_URL}
+      PAGE_SERVICE_BASE_URL: ${PAGE_SERVICE_BASE_URL}
+      COLLABORATION_SERVICE_BASE_URL: ${COLLABORATION_SERVICE_BASE_URL}
+      SEARCH_SERVICE_BASE_URL: ${SEARCH_SERVICE_BASE_URL}
+      MWS_INTEGRATION_SERVICE_BASE_URL: ${MWS_INTEGRATION_SERVICE_BASE_URL}
+      FILE_SERVICE_BASE_URL: ${FILE_SERVICE_BASE_URL}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      AUTH_SERVICE_JWKS_CACHE_TTL: ${AUTH_SERVICE_JWKS_CACHE_TTL}
+      GATEWAY_OPENAPI_PATH: ${GATEWAY_OPENAPI_PATH}
+    ports:
+      - "${GATEWAY_PORT}:8080"
+    depends_on:
+      auth-service:
+        condition: service_started
+      page-service:
+        condition: service_started
+      collaboration-service:
+        condition: service_started
+      knowledge-graph-search-service:
+        condition: service_started
+      mws-integration-service:
+        condition: service_started
+      file-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  auth-service:
+    build:
+      context: ..
+      dockerfile: services/auth-service/Dockerfile
+    container_name: wiki-auth-service
+    environment:
+      AUTH_SERVICE_PORT: 8081
+      AUTH_SERVICE_GRPC_PORT: 9091
+      AUTH_DATABASE_URL: ${AUTH_DATABASE_URL}
+      REDIS_ADDR: ${REDIS_ADDR}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - "${AUTH_SERVICE_PORT}:8081"
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/health/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  page-service:
+    build:
+      context: ..
+      dockerfile: services/page-service/Dockerfile
+    container_name: wiki-page-service
+    environment:
+      PAGE_SERVICE_PORT: 8082
+      PAGE_SERVICE_GRPC_PORT: ${PAGE_SERVICE_GRPC_PORT}
+      PAGE_DATABASE_URL: ${PAGE_DATABASE_URL}
+      AUTH_SERVICE_GRPC_ADDR: ${AUTH_SERVICE_GRPC_ADDR}
+      MWS_INTEGRATION_SERVICE_GRPC_ADDR: ${MWS_INTEGRATION_SERVICE_GRPC_ADDR}
+      FILE_SERVICE_GRPC_ADDR: ${FILE_SERVICE_GRPC_ADDR}
+      PAGE_REDIS_ADDR: ${PAGE_REDIS_ADDR}
+      PAGE_REDIS_DB: ${PAGE_REDIS_DB}
+      PAGE_NATS_URL: ${PAGE_NATS_URL}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - "${PAGE_SERVICE_PORT}:8082"
+    depends_on:
+      auth-service:
+        condition: service_started
+      file-service:
+        condition: service_started
+      mws-integration-service:
+        condition: service_started
+      postgres-page:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8082/health/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  collaboration-service:
+    build:
+      context: ..
+      dockerfile: services/collaboration-service/Dockerfile
+    container_name: wiki-collaboration-service
+    environment:
+      COLLABORATION_SERVICE_PORT: 8083
+      PAGE_SERVICE_GRPC_ADDR: ${PAGE_SERVICE_GRPC_ADDR}
+      AUTH_SERVICE_GRPC_ADDR: ${AUTH_SERVICE_GRPC_ADDR}
+      COLLABORATION_REDIS_ADDR: ${COLLABORATION_REDIS_ADDR}
+      COLLABORATION_REDIS_DB: ${COLLABORATION_REDIS_DB}
+      COLLABORATION_NATS_URL: ${COLLABORATION_NATS_URL}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - "${COLLABORATION_SERVICE_PORT}:8083"
+    depends_on:
+      auth-service:
+        condition: service_started
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+      page-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8083/health/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  knowledge-graph-search-service:
+    build:
+      context: ..
+      dockerfile: services/knowledge-graph-search-service/Dockerfile
+    container_name: wiki-search-service
+    environment:
+      SEARCH_SERVICE_PORT: 8084
+      SEARCH_DATABASE_URL: ${SEARCH_DATABASE_URL}
+      AUTH_SERVICE_GRPC_ADDR: ${AUTH_SERVICE_GRPC_ADDR}
+      SEARCH_NATS_URL: ${SEARCH_NATS_URL}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - "${SEARCH_SERVICE_PORT}:8084"
+    depends_on:
+      auth-service:
+        condition: service_started
+      postgres-search:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8084/health/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  mws-integration-service:
+    build:
+      context: ..
+      dockerfile: services/mws-integration-service/Dockerfile
+    container_name: wiki-mws-integration-service
+    environment:
+      MWS_INTEGRATION_SERVICE_PORT: 8085
+      MWS_INTEGRATION_SERVICE_GRPC_PORT: ${MWS_INTEGRATION_SERVICE_GRPC_PORT}
+      MWS_BASE_URL: ${MWS_BASE_URL}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - "${MWS_INTEGRATION_SERVICE_PORT}:8085"
+    depends_on:
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+      mws-mock:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8085/health/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  file-service:
+    build:
+      context: ..
+      dockerfile: services/file-service/Dockerfile
+    container_name: wiki-file-service
+    environment:
+      FILE_SERVICE_PORT: 8086
+      FILE_SERVICE_GRPC_PORT: ${FILE_SERVICE_GRPC_PORT}
+      FILE_DATABASE_URL: ${FILE_DATABASE_URL}
+      AUTH_SERVICE_GRPC_ADDR: ${AUTH_SERVICE_GRPC_ADDR}
+      FILE_MINIO_ENDPOINT: ${FILE_MINIO_ENDPOINT}
+      FILE_MINIO_PUBLIC_BASE_URL: ${FILE_MINIO_PUBLIC_BASE_URL}
+      FILE_MINIO_ACCESS_KEY_ID: ${FILE_MINIO_ACCESS_KEY_ID}
+      FILE_MINIO_SECRET_ACCESS_KEY: ${FILE_MINIO_SECRET_ACCESS_KEY}
+      FILE_MINIO_BUCKET: ${FILE_MINIO_BUCKET}
+      FILE_MINIO_USE_SSL: ${FILE_MINIO_USE_SSL}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - "${FILE_SERVICE_PORT}:8086"
+    depends_on:
+      auth-service:
+        condition: service_started
+      postgres-file:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8086/health/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: wiki-postgres-auth
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_AUTH}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${AUTH_DB_PORT}:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB_AUTH}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-page:
+    image: postgres:16-alpine
+    container_name: wiki-postgres-page
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_PAGE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${PAGE_DB_PORT}:5432"
+    volumes:
+      - postgres-page-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB_PAGE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-search:
+    image: postgres:16-alpine
+    container_name: wiki-postgres-search
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_SEARCH}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${SEARCH_DB_PORT}:5432"
+    volumes:
+      - postgres-search-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB_SEARCH}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-file:
+    image: postgres:16-alpine
+    container_name: wiki-postgres-file
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_FILE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${FILE_DB_PORT}:5432"
+    volumes:
+      - postgres-file-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB_FILE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: wiki-redis
+    ports:
+      - "6379:6379"
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: wiki-nats
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  minio:
+    image: minio/minio:RELEASE.2025-02-03T21-03-04Z
+    container_name: wiki-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-02-08T19-14-21Z
+    container_name: wiki-minio-init
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET_ATTACHMENTS: ${MINIO_BUCKET_ATTACHMENTS}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD; do sleep 1; done &&
+      mc mb --ignore-existing local/$$MINIO_BUCKET_ATTACHMENTS
+      "
+    restart: "no"
+
+  mws-mock:
+    image: hashicorp/http-echo:1.0.0
+    container_name: wiki-mws-mock
+    command: ["-listen=:8090", "-text={\"service\":\"mws-mock\",\"status\":\"ok\"}"]
+    ports:
+      - "${MWS_MOCK_PORT}:8090"
+
+  prometheus:
+    image: prom/prometheus:v3.2.0
+    container_name: wiki-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      gateway:
+        condition: service_started
+
+volumes:
+  postgres-auth-data:
+  postgres-page-data:
+  postgres-search-data:
+  postgres-file-data:
+  minio-data:
