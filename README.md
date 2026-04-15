@@ -57,40 +57,158 @@ Backend monorepo для wiki editor platform из `specs/001-wiki-editor-backend
 
 ## Архитектура
 
+### UML Component Diagram
+
+```mermaid
+classDiagram
+    direction TB
+
+    class Frontend["Editor Frontend"] {
+        <<client>>
+        Slate editor UI
+        Slash menu and hotkeys
+        Search and file flows
+        WebSocket collaboration client
+    }
+
+    class Gateway["API Gateway"] {
+        <<gateway>>
+        Public HTTP entry point
+        JWT validation
+        Authorization middleware
+        WebSocket upgrade proxy
+        OpenAPI exposure
+    }
+
+    class Auth["Auth Service"] {
+        <<service>>
+        Login and refresh
+        JWKS and token issuance
+        Workspace and page grants
+        Runtime authorization authority
+    }
+
+    class Page["Page Service"] {
+        <<service>>
+        Canonical page document
+        Draft and published heads
+        Autosave and recovery
+        Publish restore archive
+        Outbox events
+    }
+
+    class Collaboration["Collaboration Service"] {
+        <<service>>
+        Live rooms and presence
+        Server authoritative patches
+        Rebase and reconnect handling
+        Session replay coordination
+    }
+
+    class Search["Knowledge Graph Search Service"] {
+        <<service>>
+        Backlink projections
+        PostgreSQL FTS search
+        Related pages
+        Auth aware result filtering
+    }
+
+    class File["File Service"] {
+        <<service>>
+        Upload sessions
+        Metadata persistence
+        Presigned URLs
+        Soft delete
+    }
+
+    class MWSI["MWS Integration Service"] {
+        <<service>>
+        Table access validation
+        Schema fetch
+        Preview fetch
+        Degraded embed descriptors
+    }
+
+    class PgAuth["PostgreSQL Auth"] { <<database>> }
+    class PgPage["PostgreSQL Page"] { <<database>> }
+    class PgSearch["PostgreSQL Search"] { <<database>> }
+    class PgFile["PostgreSQL File"] { <<database>> }
+    class Redis["Redis"] { <<cache>> }
+    class Nats["NATS JetStream"] { <<event-bus>> }
+    class Minio["MinIO"] { <<object-storage>> }
+    class MWS["MWS Tables or Mock"] { <<external-system>> }
+
+    Frontend --> Gateway : HTTPS JSON and WebSocket
+
+    Gateway --> Auth : HTTP auth routes
+    Gateway --> Page : HTTP page routes
+    Gateway --> Collaboration : WebSocket room proxy
+    Gateway --> Search : HTTP search routes
+    Gateway --> File : HTTP file routes
+    Gateway --> MWSI : HTTP embed routes
+
+    Page ..> Auth : gRPC authorization checks
+    Page ..> File : gRPC file metadata lookup
+    Page ..> MWSI : gRPC embed resolution
+    Page --> PgPage : canonical state and revisions
+    Page --> Redis : replay window and cache
+    Page --> Nats : outbox relay
+
+    Collaboration ..> Auth : gRPC authorization checks
+    Collaboration ..> Page : gRPC revision commit and head fetch
+    Collaboration --> Redis : room state and presence
+    Collaboration --> Nats : revision refresh subscription
+
+    Search ..> Auth : gRPC authorization checks
+    Search --> PgSearch : FTS index and backlinks
+    Search --> Nats : page event consumer
+
+    File ..> Auth : gRPC authorization checks
+    File --> PgFile : file metadata
+    File --> Minio : object storage
+
+    Auth --> PgAuth : users grants sessions
+    Auth --> Redis : refresh and auth cache
+
+    MWSI --> MWS : table schema and preview
+```
+
+### Deployment Diagram
+
 ```mermaid
 flowchart TB
-    subgraph CLIENT["Client"]
-        FE[Editor Frontend]
+    subgraph CLIENT["Client Runtime"]
+        FE[Browser or Frontend Container]
     end
 
-    subgraph ENTRY["Entry Point"]
-        GW[API Gateway]
+    subgraph COMPOSE["Docker Compose Demo Stack"]
+        GW[wiki-gateway]
+
+        subgraph APPS["Application Services"]
+            AUTH[wiki-auth-service]
+            PAGE[wiki-page-service]
+            COLLAB[wiki-collaboration-service]
+            SEARCH[wiki-search-service]
+            FILES[wiki-file-service]
+            MWSI[wiki-mws-integration-service]
+        end
+
+        subgraph DATA["State and Messaging"]
+            PGAUTH[(wiki-postgres-auth)]
+            PGPAGE[(wiki-postgres-page)]
+            PGSEARCH[(wiki-postgres-search)]
+            PGFILE[(wiki-postgres-file)]
+            REDIS[(wiki-redis)]
+            NATS[(wiki-nats)]
+            MINIO[(wiki-minio)]
+        end
+
+        subgraph EXT["External and Mock"]
+            MWS[(wiki-mws-mock or real MWS)]
+        end
     end
 
-    subgraph SERVICES["Core Services"]
-        AUTH[Auth Service]
-        PAGE[Page Service]
-        COLLAB[Collaboration Service]
-        SEARCH[Search Service]
-        FILES[File Service]
-        MWSI[MWS Integration Service]
-    end
-
-    subgraph INFRA["Infrastructure"]
-        PGAUTH[(PostgreSQL Auth)]
-        PGPAGE[(PostgreSQL Page)]
-        PGSEARCH[(PostgreSQL Search)]
-        PGFILE[(PostgreSQL File)]
-        REDIS[(Redis)]
-        NATS[(NATS JetStream)]
-        MINIO[(MinIO)]
-    end
-
-    subgraph EXTERNAL["External Systems"]
-        MWS[(MWS Tables or Mock)]
-    end
-
-    FE --> GW
+    FE -->|api and ws| GW
 
     GW --> AUTH
     GW --> PAGE
@@ -105,25 +223,28 @@ flowchart TB
     PAGE --> PGPAGE
     PAGE --> REDIS
     PAGE --> NATS
-    PAGE --> AUTH
-    PAGE --> FILES
-    PAGE --> MWSI
 
     COLLAB --> REDIS
     COLLAB --> NATS
     COLLAB --> PAGE
-    COLLAB --> AUTH
 
     SEARCH --> PGSEARCH
     SEARCH --> NATS
-    SEARCH --> AUTH
 
     FILES --> PGFILE
     FILES --> MINIO
-    FILES --> AUTH
 
     MWSI --> MWS
 ```
+
+### Legend
+
+- `HTTPS JSON and WebSocket` — публичный frontend protocol через gateway
+- `gRPC` — внутренние synchronous service-to-service checks и lookup calls
+- `NATS JetStream` — outbox relay, projections, revision refresh
+- `Redis` — session state, presence, replay window, auth/session cache
+- `PostgreSQL` — постоянное состояние bounded context
+- `MinIO` — object storage для файлов и вложений
 
 ### Ответственность сервисов
 
