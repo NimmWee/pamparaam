@@ -58,40 +58,71 @@ Backend monorepo для wiki editor platform из `specs/001-wiki-editor-backend
 ## Архитектура
 
 ```mermaid
-flowchart LR
-    FE[Editor Frontend\nexternal client] --> GW[API Gateway]
+flowchart TB
+    subgraph CLIENT["Client"]
+        FE[Editor Frontend]
+    end
 
-    GW --> AUTH[Auth Service]
-    GW --> PAGE[Page Service]
-    GW --> COLLAB[Collaboration Service]
-    GW --> SEARCH[Knowledge Graph / Search Service]
-    GW --> FILES[File Service]
-    GW --> MWSI[MWS Integration Service]
+    subgraph ENTRY["Entry Point"]
+        GW[API Gateway]
+    end
 
-    PAGE --> PGPAGE[(PostgreSQL Page)]
-    PAGE --> REDIS[(Redis)]
-    PAGE --> NATS[(NATS JetStream)]
+    subgraph SERVICES["Core Services"]
+        AUTH[Auth Service]
+        PAGE[Page Service]
+        COLLAB[Collaboration Service]
+        SEARCH[Search Service]
+        FILES[File Service]
+        MWSI[MWS Integration Service]
+    end
+
+    subgraph INFRA["Infrastructure"]
+        PGAUTH[(PostgreSQL Auth)]
+        PGPAGE[(PostgreSQL Page)]
+        PGSEARCH[(PostgreSQL Search)]
+        PGFILE[(PostgreSQL File)]
+        REDIS[(Redis)]
+        NATS[(NATS JetStream)]
+        MINIO[(MinIO)]
+    end
+
+    subgraph EXTERNAL["External Systems"]
+        MWS[(MWS Tables or Mock)]
+    end
+
+    FE --> GW
+
+    GW --> AUTH
+    GW --> PAGE
+    GW --> COLLAB
+    GW --> SEARCH
+    GW --> FILES
+    GW --> MWSI
+
+    AUTH --> PGAUTH
+    AUTH --> REDIS
+
+    PAGE --> PGPAGE
+    PAGE --> REDIS
+    PAGE --> NATS
+    PAGE --> AUTH
     PAGE --> FILES
     PAGE --> MWSI
-    PAGE --> AUTH
 
     COLLAB --> REDIS
     COLLAB --> NATS
     COLLAB --> PAGE
     COLLAB --> AUTH
 
-    SEARCH --> PGSEARCH[(PostgreSQL Search)]
+    SEARCH --> PGSEARCH
     SEARCH --> NATS
     SEARCH --> AUTH
 
-    FILES --> PGFILE[(PostgreSQL File)]
-    FILES --> MINIO[(MinIO)]
+    FILES --> PGFILE
+    FILES --> MINIO
     FILES --> AUTH
 
-    AUTH --> PGAUTH[(PostgreSQL Auth)]
-    AUTH --> REDIS
-
-    MWSI --> MWS[(MWS Tables / Mock)]
+    MWSI --> MWS
 ```
 
 ### Ответственность сервисов
