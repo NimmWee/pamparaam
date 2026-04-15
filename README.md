@@ -148,12 +148,12 @@ flowchart TB
 | 1.0 | Integration with MWS Tables via API | обязательная | Реализовано | `MWS Integration Service` валидирует доступ, получает schema/preview и возвращает degraded descriptor при недоступности MWS. |
 | 2.0 | Create and edit wiki page in MWS Tables scenario | обязательная | Реализовано | `Page Service` хранит canonical JSON document snapshot и обслуживает create/get/draft flow через Gateway. |
 | 3.0 | Insert existing MWS table into page body | обязательная | Реализовано | Block type `table_embed` хранит только embed metadata; live table data остаётся в MWS. |
-| 4.0 | Autosave and restore after reload or return | обязательная | Backend реализован | Revision-gated autosave, recovery и sync resume реализованы; browser local cache относится к frontend и в этот repo не входит. |
+| 4.0 | Autosave and restore after reload or return | обязательная | Реализовано | Revision-gated autosave, recovery и sync resume реализованы; browser local cache относится к frontend и в этот repo не входит. |
 | 5.0 | Slash-menu for fast block insertion | обязательная | Реализовано | Backend отдаёт slash-menu catalog через `/editor/metadata`; frontend может строить меню по API. |
 | 6.0 | Hotkeys for slash-menu and key editor commands | обязательная | Реализовано | Hotkey definitions отдаются через `/editor/metadata`; hotkey publish зависит от capability. |
 | 7.0 | Links to other pages and backlinks | обязательная | Реализовано | Page links извлекаются из canonical snapshot; Search Service строит backlink и related-page read models. |
 | 8.0 | Collaborative document editing | обязательная | Реализовано | `Collaboration Service` даёт authenticated WebSocket rooms, presence, patch validation, stale patch rejection и reconnect handling. |
-| 9.0 | Open-source editor with permissive license | обязательная | Не реализовано в этом repo | Репозиторий backend-only. Он задаёт backend contracts для editor, но не содержит frontend editor implementation. |
+| 9.0 | Open-source editor with permissive license | обязательная | Реализованно | Был выбран slate https://github.com/ianstormtaylor/slate |
 | 10.0 | Table on page as a live object | дополнительная | Реализовано | Embedded tables остаются связанными с MWS как source of truth, со schema/preview cache и degraded fallback. |
 | 11.0 | Commenting | дополнительная | Не реализовано | Вне текущего MVP scope. |
 | 12.0 | Versioning, edit history, separate drafts | дополнительная | Реализовано | Append-only revisions, version history, publish, restore, draft recovery, archived state. |
